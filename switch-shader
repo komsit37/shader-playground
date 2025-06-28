@@ -13,7 +13,23 @@ if [ -z "$1" ]; then
   # No argument provided, list all .glsl files in the shader directory
   echo "Available shaders:"
   for i in "${!SHADERS[@]}"; do
-    printf "%3d: %s\n" "$((i+1))" "${SHADERS[$i]}"
+    SHADER_NAME=${SHADERS[$i]}
+    MD_FILE="$SHADER_DIR/$SHADER_NAME.md"
+
+    printf "\033[1;32m%3d\033[0m: \033[0;33m%-25s\033[0m" "$((i+1))" "$SHADER_NAME"
+
+    if [ -f "$MD_FILE" ]; then
+      TITLE=$(grep -m 1 '^#' "$MD_FILE" | sed 's/# //')
+      DESCRIPTION=$(grep -m 1 -v -e '^#' -e '^$' "$MD_FILE")
+
+      if [ -n "$TITLE" ]; then
+        printf " | \033[1;36m%s\033[0m" "$TITLE"
+      fi
+      if [ -n "$DESCRIPTION" ]; then
+        printf " | %s" "$DESCRIPTION"
+      fi
+    fi
+    printf "\n"
   done
   exit 0
 fi
