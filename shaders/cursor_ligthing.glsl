@@ -67,8 +67,9 @@ float glow(float distance, float radius, float intensity) {
 const vec4 TRAIL_COLOR = vec4(1., 1., 0., 1.0);
 const vec4 GLOW_COLOR = vec4(1., 0.8, 0.2, 0.5);
 const float DURATION = 0.8;
+const float GLOW_FADE_START = 0.1;
 const float GLOW_RADIUS = 0.02;
-const float GLOW_INTENSITY = 1.5;
+const float GLOW_INTENSITY = 1.0;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
@@ -112,21 +113,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // Apply subtle fading effect to trail color
     vec4 fadedTrailColor = TRAIL_COLOR * fadeFactor * 0.3;
 
+    // Calculate glow fade factor
+    float glowFade = 1.0 - smoothstep(GLOW_FADE_START, DURATION, progress);
+    
     // Add glow effect for cursor
     float glowCursor = glow(abs(sdfCurrentCursor), GLOW_RADIUS, GLOW_INTENSITY);
-    glowCursor = clamp(glowCursor, 0.0, 1.0);
+    glowCursor = clamp(glowCursor * glowFade, 0.0, 1.0);
     
     // Add glow effect for trail
     float glowTrail = glow(abs(sdfTrail), GLOW_RADIUS * 0.7, GLOW_INTENSITY * 0.8);
-    glowTrail = clamp(glowTrail * fadeFactor, 0.0, 1.0);
+    glowTrail = clamp(glowTrail * fadeFactor * glowFade, 0.0, 1.0);
 
     // Blend trail with subtle fade effect
     newColor = mix(newColor, fadedTrailColor, antialising(sdfTrail) * 0.5);
-    // Add trail glow
+    // Add trail glow (only if glow is still active)
     newColor = mix(newColor, GLOW_COLOR, glowTrail * 0.3);
     // Draw current cursor with reduced opacity
     newColor = mix(newColor, TRAIL_COLOR * 0.6, antialising(sdfCurrentCursor));
-    // Add cursor glow
+    // Add cursor glow (only if glow is still active)
     newColor = mix(newColor, GLOW_COLOR, glowCursor * 0.4);
     
     fragColor = newColor;
