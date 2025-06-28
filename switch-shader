@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Path to the Ghostty config file
+CONFIG_FILE="$HOME/.config/ghostty/config"
+# Directory containing the shaders
+SHADER_DIR="/Users/pkomsit/code/js/shader-playground/shaders"
+
+# Get a list of shaders
+SHADERS=($(find "$SHADER_DIR" -maxdepth 1 -name "*.glsl" -exec basename {} .glsl \; | sort))
+
+# Check if an argument is provided
+if [ -z "$1" ]; then
+  # No argument provided, list all .glsl files in the shader directory
+  echo "Available shaders:"
+  for i in "${!SHADERS[@]}"; do
+    printf "%3d: %s\n" "$((i+1))" "${SHADERS[$i]}"
+  done
+  exit 0
+fi
+
+# Input from the first argument
+INPUT=$1
+SHADER_NAME=""
+
+# Check if the input is a number (index)
+if [[ $INPUT =~ ^[0-9]+$ ]]; then
+  INDEX=$((INPUT-1))
+  if [ $INDEX -ge 0 ] && [ $INDEX -lt ${#SHADERS[@]} ]; then
+    SHADER_NAME=${SHADERS[$INDEX]}
+  else
+    echo "Error: Invalid index '$INPUT'."
+    exit 1
+  fi
+else
+  # Input is a shader name
+  SHADER_NAME=$INPUT
+fi
+
+SHADER_FILE="shaders/$SHADER_NAME.glsl"
+
+# Check if the shader file exists
+if [ ! -f "$SHADER_DIR/$SHADER_NAME.glsl" ]; then
+  echo "Error: Shader '$SHADER_NAME' not found."
+  echo "Available shaders:"
+  for i in "${!SHADERS[@]}"; do
+    printf "%3d: %s\n" "$((i+1))" "${SHADERS[$i]}"
+  done
+  exit 1
+fi
+
+# Update the config file
+sed -i.bak "s|custom-shader = .*|custom-shader = $SHADER_FILE|" "$CONFIG_FILE"
+
+echo "Switched to shader: $SHADER_NAME"
+
+# Restart Ghostty
+PID=$(pgrep ghostty)
+if [ -n "$PID" ]; then
+  echo "Terminating existing Ghostty process (PID: $PID)..."
+  kill "$PID"
+  sleep 1 # Wait a moment for the process to terminate
+fi
+
+echo "Starting Ghostty..."
+open -a Ghostty
