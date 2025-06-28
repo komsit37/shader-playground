@@ -62,7 +62,7 @@ Promise.all([
     // fetch("/shaders/debug_cursor_animated.glsl").then((response) =>
     //   response.text(),
     // ),
-    fetch("/shaders/cursor_blaze.glsl").then((response) => response.text()),
+    fetch("/shaders/cursor_ligthing.glsl").then((response) => response.text()),
     fetch("/shaders/cursor_smear.glsl").then((response) => response.text()),
   ]),
 ]).then(([ghosttyWrapper, shaders]) => {
