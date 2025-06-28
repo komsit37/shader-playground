@@ -169,10 +169,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             }
         }
         
-        // Add digital noise overlay during transition
-        float noiseIntensity = sin(progress * 6.28318) * 0.5 + 0.5;
-        float digitalNoise = pixelGrid(vu * 200.0, 0.005) * noiseIntensity * 0.1;
-        newColor.rgb += digitalNoise * FRAGMENT_COLOR.rgb;
+        // Digital noise removed to prevent screen flashing
     }
     
     // Draw current cursor with digital core effect
