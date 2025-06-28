@@ -64,7 +64,7 @@ Promise.all([
     // ),
     fetch("/shaders/cursor_ligthing.glsl").then((response) => response.text()),
     fetch("/shaders/cursor_ligthing_fancy.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_smear.glsl").then((response) => response.text()),
+    fetch("/shaders/cursor_rainbow.glsl").then((response) => response.text()),
   ]),
 ]).then(([ghosttyWrapper, shaders]) => {
   const wrapShader = (shader) => ghosttyWrapper.replace("//$REPLACE$", shader);
