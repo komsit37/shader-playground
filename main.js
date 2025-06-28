@@ -37,50 +37,77 @@ window.addEventListener("resize", function () {
 });
 
 function setGrid() {
-  const isVertical = window.innerHeight > window.innerWidth;
   const playground = document.getElementById("playground");
   if (!playground) {
     return;
   }
-  let value = sandboxes.reduce((a, b) => a + " 1fr", "");
-  console.log(value);
-
-  if (isVertical) {
-    playground.style.gridTemplateColumns = "unset";
-    playground.style.gridTemplateRows = value;
-  } else {
-    playground.style.gridTemplateColumns = value;
-    playground.style.gridTemplateRows = "unset";
-  }
+  
+  const shaderCount = sandboxes.length;
+  if (shaderCount === 0) return;
+  
+  // Calculate square grid dimensions
+  const cols = Math.ceil(Math.sqrt(shaderCount));
+  const rows = Math.ceil(shaderCount / cols);
+  
+  playground.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  playground.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  
+  console.log(`Grid: ${cols}x${rows} for ${shaderCount} shaders`);
 }
 let previousCursor = { x: 0, y: 0, z: 10, w: 20 };
 let currentCursor = { x: 0, y: 0, z: 10, w: 20 };
 let option = 0;
+// Shader configurations with names
+const shaderConfigs = [
+  { name: "Lighting", file: "cursor_ligthing.glsl" },
+  { name: "Lightning", file: "cursor_ligthing_fancy.glsl" },
+  { name: "Rainbow", file: "cursor_rainbow.glsl" },
+  { name: "Bounce", file: "cursor_bounce.glsl" },
+  { name: "Bounce Clean", file: "cursor_bounce_clean.glsl" },
+  { name: "Digital Dissolve", file: "cursor_digital_dissolve.glsl" },
+];
+
 Promise.all([
   fetch("/shaders/ghostty_wrapper.glsl").then((response) => response.text()),
-  Promise.all([
-    // fetch("/shaders/debug_cursor_animated.glsl").then((response) =>
-    //   response.text(),
-    // ),
-    fetch("/shaders/cursor_ligthing.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_ligthing_fancy.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_rainbow.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_bounce.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_bounce_clean.glsl").then((response) => response.text()),
-    fetch("/shaders/cursor_digital_dissolve.glsl").then((response) => response.text()),
-  ]),
+  Promise.all(
+    shaderConfigs.map(config => 
+      fetch(`/shaders/${config.file}`).then((response) => response.text())
+    )
+  ),
 ]).then(([ghosttyWrapper, shaders]) => {
   const wrapShader = (shader) => ghosttyWrapper.replace("//$REPLACE$", shader);
-  shaders.forEach((shader) => {
-    const sandbox = init(wrapShader(shader));
+  shaders.forEach((shader, index) => {
+    const sandbox = init(wrapShader(shader), shaderConfigs[index].name);
     sandboxes.push(sandbox);
   });
   setGrid();
+  
+  // Auto-start with auto mode
+  changeMode("auto");
 });
 
-function init(shader) {
+function init(shader, shaderName) {
   const canvasWrapper = document.createElement("div");
   canvasWrapper.className = "_canvas-wrapper";
+
+  // Add shader name label
+  const nameLabel = document.createElement("div");
+  nameLabel.className = "shader-name";
+  nameLabel.textContent = shaderName;
+  nameLabel.style.cssText = `
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    z-index: 10;
+    pointer-events: none;
+  `;
+  canvasWrapper.appendChild(nameLabel);
 
   const canvas = document.createElement("canvas");
   canvasWrapper.appendChild(canvas);
