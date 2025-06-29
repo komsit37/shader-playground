@@ -9,10 +9,7 @@ export const SHADER_NAMES = [
   "cursor_pastel_sparkle",
   "cursor_focus_pulse",
   "cursor_manga_slash",
-  "cursor_adaptive",
-  "cursor_ripple",
-  "cursor_pulse",
-  "cursor_spiral"
+  "cursor_adaptive"
 ];
 
 export const CONFIG = {
