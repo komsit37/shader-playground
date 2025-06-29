@@ -149,6 +149,51 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
                     newColor = mix(newColor, FRAGMENT_COLOR, fragment * 0.6);
                 }
             }
+            
+            // Add dissolving trail connecting previous to current position
+            vec2 trailDir = normalize(centerCC - centerCP);
+            vec2 perpDir = vec2(-trailDir.y, trailDir.x);
+            float trailLength = moveDistance;
+            
+            // Sample multiple points along the trail
+            for (int j = 0; j < 8; j++) {
+                float trailPos = float(j) / 7.0; // 0 to 1 along trail
+                vec2 trailPoint = mix(centerCP, centerCC, trailPos);
+                
+                // Add dissolving fragments along the trail
+                float trailProgress = clamp((dissolvePhase - trailPos * 0.3), 0.0, 1.0);
+                if (trailProgress > 0.0) {
+                    // Multiple fragments per trail point
+                    for (int k = 0; k < 3; k++) {
+                        float subAngle = float(k) * 2.09439; // 120 degrees apart
+                        vec2 subCenter = trailPoint + perpDir * sin(subAngle) * currentCursor.z * 0.2;
+                        
+                        float trailFragment = digitalFragment(
+                            vu,
+                            subCenter,
+                            0.006, // Smaller trail fragments
+                            float(j * 3 + k) * 5.73,
+                            iTime,
+                            trailProgress
+                        );
+                        
+                        if (trailFragment > 0.0) {
+                            // Trail fragments have different color
+                            vec4 trailColor = mix(FRAGMENT_COLOR, GLITCH_COLOR, trailPos);
+                            newColor = mix(newColor, trailColor, trailFragment * 0.4);
+                        }
+                    }
+                    
+                    // Add connecting line segments
+                    vec2 toPoint = vu - trailPoint;
+                    float lineWidth = 0.003 * (1.0 - trailProgress);
+                    float lineDist = abs(dot(toPoint, perpDir));
+                    if (lineDist < lineWidth && dot(toPoint, trailDir) > -currentCursor.z * 0.1 && dot(toPoint, trailDir) < currentCursor.z * 0.1) {
+                        float lineIntensity = (1.0 - lineDist / lineWidth) * trailProgress * 0.3;
+                        newColor = mix(newColor, FRAGMENT_COLOR, lineIntensity);
+                    }
+                }
+            }
         }
         
         // Phase 2: Reassembly at new position (0.4 to 1.0)
