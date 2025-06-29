@@ -40,7 +40,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText('shaders/ghostty_wrapper.glsl');
+    const promise = this.fetchText('./shaders/ghostty_wrapper.glsl');
     this.loadingPromises.set(cacheKey, promise);
 
     try {
@@ -84,7 +84,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText(`shaders/${filename}`);
+    const promise = this.fetchText(`./shaders/${filename}`);
     this.loadingPromises.set(cacheKey, promise);
 
     try {
@@ -111,7 +111,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText(`shaders/${filename}`);
+    const promise = this.fetchText(`./shaders/${filename}`);
     this.loadingPromises.set(cacheKey, promise);
 
     try {
