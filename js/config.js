@@ -7,7 +7,8 @@ export const SHADER_NAMES = [
   "cursor_bounce_clean",
   "cursor_digital_dissolve",
   "cursor_pastel_sparkle",
-  "cursor_focus_pulse"
+  "cursor_focus_pulse",
+  "cursor_manga_slash"
 ];
 
 export const CONFIG = {
