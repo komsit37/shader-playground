@@ -97,7 +97,7 @@ const vec4 CURSOR_COLOR = vec4(0.0, 1.0, 0.8, 1.0); // Cyan-green
 const vec4 FRAGMENT_COLOR = vec4(0.2, 1.0, 0.6, 0.8); // Bright green
 const vec4 GLITCH_COLOR = vec4(1.0, 0.4, 0.8, 0.6); // Magenta accent
 const vec4 CORE_COLOR = vec4(1.0, 1.0, 1.0, 1.0); // White core
-const float DURATION = 0.4; // Fast digital effect
+const float BASE_DURATION = 0.4; // Base digital effect duration
 const int FRAGMENT_COUNT = 16; // Number of pixel fragments
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -114,11 +114,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec4 currentCursor = vec4(normalize(iCurrentCursor.xy, 1.), normalize(iCurrentCursor.zw, 0.));
     vec4 previousCursor = vec4(normalize(iPreviousCursor.xy, 1.), normalize(iPreviousCursor.zw, 0.));
 
-    float progress = clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0);
-    
     vec2 centerCC = getRectangleCenter(currentCursor);
     vec2 centerCP = getRectangleCenter(previousCursor);
     float moveDistance = distance(centerCC, centerCP);
+    
+    // Dynamic duration based on jump distance
+    // Short jumps: 0.4s, medium jumps: 0.8s, long jumps: 1.2s
+    float jumpMultiplier = 1.0 + clamp(moveDistance * 8.0, 0.0, 2.0);
+    float dynamicDuration = BASE_DURATION * jumpMultiplier;
+    
+    float progress = clamp((iTime - iTimeCursorChange) / dynamicDuration, 0.0, 1.0);
     
     vec4 newColor = vec4(fragColor);
     
@@ -155,23 +160,33 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             vec2 perpDir = vec2(-trailDir.y, trailDir.x);
             float trailLength = moveDistance;
             
+            // More trail points for longer jumps
+            int trailPoints = int(8.0 + moveDistance * 20.0);
+            trailPoints = min(trailPoints, 16); // Cap at 16 for performance
+            
             // Sample multiple points along the trail
-            for (int j = 0; j < 8; j++) {
-                float trailPos = float(j) / 7.0; // 0 to 1 along trail
+            for (int j = 0; j < 16; j++) {
+                if (j >= trailPoints) break;
+                
+                float trailPos = float(j) / float(trailPoints - 1); // 0 to 1 along trail
                 vec2 trailPoint = mix(centerCP, centerCC, trailPos);
                 
-                // Add dissolving fragments along the trail
-                float trailProgress = clamp((dissolvePhase - trailPos * 0.3), 0.0, 1.0);
+                // Longer trails have more gradual timing offset
+                float trailTimingOffset = 0.3 / jumpMultiplier;
+                float trailProgress = clamp((dissolvePhase - trailPos * trailTimingOffset), 0.0, 1.0);
                 if (trailProgress > 0.0) {
                     // Multiple fragments per trail point
                     for (int k = 0; k < 3; k++) {
                         float subAngle = float(k) * 2.09439; // 120 degrees apart
                         vec2 subCenter = trailPoint + perpDir * sin(subAngle) * currentCursor.z * 0.2;
                         
+                        // Vary fragment size based on distance and position
+                        float fragmentSize = 0.006 + moveDistance * 0.002;
+                        
                         float trailFragment = digitalFragment(
                             vu,
                             subCenter,
-                            0.006, // Smaller trail fragments
+                            fragmentSize,
                             float(j * 3 + k) * 5.73,
                             iTime,
                             trailProgress
