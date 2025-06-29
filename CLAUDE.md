@@ -146,3 +146,7 @@ This enables trail effects and smooth transitions between cursor states.
 3. Test interaction modes to verify cursor tracking
 4. Use keyboard arrows for precise cursor movement in click mode
 
+## Important: Shader Development
+
+**CRITICAL**: All cursor shaders MUST read the current screen content first to avoid black screen in Ghostty terminal. See SHADER_DESIGN.md for complete guidelines and common pitfalls.
+
