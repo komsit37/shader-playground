@@ -4,6 +4,16 @@
 import { SHADER_CONFIGS } from './js/config.js';
 import { extractDescription, markdownToHtml } from './js/utils.js';
 
+// Get base path for GitHub Pages or local development
+function getBasePath() {
+  if (window.location.hostname.includes('github.io')) {
+    return '//raw.githubusercontent.com/komsit37/shader-playground/refs/heads/main/';
+  }
+  return './';
+}
+
+const basePath = getBasePath();
+
 let cursorWidth = 10;
 let cursorHeight = 20;
 let mode = "click";
@@ -181,15 +191,15 @@ function showFullDescription(shaderName, markdown) {
 }
 
 Promise.all([
-  fetch("/shaders/ghostty_wrapper.glsl").then((response) => response.text()),
+  fetch(`${basePath}shaders/ghostty_wrapper.glsl`).then((response) => response.text()),
   Promise.all(
     SHADER_CONFIGS.map(config => 
-      fetch(`/shaders/${config.file}`).then((response) => response.text())
+      fetch(`${basePath}shaders/${config.file}`).then((response) => response.text())
     )
   ),
   Promise.all(
     SHADER_CONFIGS.map(config => 
-      fetch(`/shaders/${config.md}`).then((response) => response.text())
+      fetch(`${basePath}shaders/${config.md}`).then((response) => response.text())
     )
   ),
 ]).then(([ghosttyWrapper, shaders, markdownFiles]) => {
