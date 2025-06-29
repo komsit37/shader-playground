@@ -5,6 +5,16 @@ export class ShaderLoader {
   constructor() {
     this.cache = new Map();
     this.loadingPromises = new Map();
+    this.basePath = this.getBasePath();
+  }
+
+  getBasePath() {
+    // Detect if running on GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+      return '//raw.githubusercontent.com/komsit37/shader-playground/refs/heads/main/';
+    }
+    // Local development
+    return './';
   }
 
   // Load all shaders and related assets
@@ -40,7 +50,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText('./shaders/ghostty_wrapper.glsl');
+    const promise = this.fetchText(`${this.basePath}shaders/ghostty_wrapper.glsl`);
     this.loadingPromises.set(cacheKey, promise);
 
     try {
@@ -84,7 +94,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText(`./shaders/${filename}`);
+    const promise = this.fetchText(`${this.basePath}shaders/${filename}`);
     this.loadingPromises.set(cacheKey, promise);
 
     try {
@@ -111,7 +121,7 @@ export class ShaderLoader {
       return this.loadingPromises.get(cacheKey);
     }
 
-    const promise = this.fetchText(`./shaders/${filename}`);
+    const promise = this.fetchText(`${this.basePath}shaders/${filename}`);
     this.loadingPromises.set(cacheKey, promise);
 
     try {
