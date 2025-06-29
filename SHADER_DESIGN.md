@@ -134,3 +134,16 @@ Terminal Context:
 
 The shader system is very flexible - you're essentially writing a small graphics program that
 runs on the GPU for each pixel!
+
+## Critical Issue: Terminal Content Preservation
+
+**Problem**: Shaders that don't read screen content create black screen in Ghostty, hiding all terminal text.
+
+**Solution**: Always start with:
+```glsl
+#if !defined(WEB)
+fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
+#endif
+```
+
+Then blend effects with the original content using `mix()` instead of replacing it.
