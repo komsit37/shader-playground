@@ -1,70 +1,143 @@
-// A terminal-optimized cursor for focus and clarity.
-// - When idle, it has a subtle, slow pulsing glow.
-// - When moving, it has a soft, brighter glow to make tracking easy.
-// Ideal for use in Neovim and tmux.
-
-vec2 normalize_coord(vec2 coord, float isPosition) {
-    return (coord * 2.0 - (iResolution.xy * isPosition)) / iResolution.y;
-}
-
-float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b) {
+float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b)
+{
     vec2 d = abs(p - xy) - b;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-float antialising(float distance) {
-    return 1.0 - smoothstep(0.0, normalize_coord(vec2(2.0, 2.0), 0.0).x, distance);
+// Based on Inigo Quilez's 2D distance functions article: https://iquilezles.org/articles/distfunctions2d/
+float seg(in vec2 p, in vec2 a, in vec2 b, inout float s, float d) {
+    vec2 e = b - a;
+    vec2 w = p - a;
+    vec2 proj = a + e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+    float segd = dot(p - proj, p - proj);
+    d = min(d, segd);
+
+    float c0 = step(0.0, p.y - a.y);
+    float c1 = 1.0 - step(0.0, p.y - b.y);
+    float c2 = 1.0 - step(0.0, e.x * w.y - e.y * w.x);
+    float allCond = c0 * c1 * c2;
+    float noneCond = (1.0 - c0) * (1.0 - c1) * (1.0 - c2);
+    float flip = mix(1.0, -1.0, step(0.5, allCond + noneCond));
+    s *= flip;
+    return d;
 }
 
+float getSdfParallelogram(in vec2 p, in vec2 v0, in vec2 v1, in vec2 v2, in vec2 v3) {
+    float s = 1.0;
+    float d = dot(p - v0, p - v0);
+
+    d = seg(p, v0, v3, s, d);
+    d = seg(p, v1, v0, s, d);
+    d = seg(p, v2, v1, s, d);
+    d = seg(p, v3, v2, s, d);
+
+    return s * sqrt(d);
+}
+
+vec2 normalize(vec2 value, float isPosition) {
+    return (value * 2.0 - (iResolution.xy * isPosition)) / iResolution.y;
+}
+
+float antialising(float distance) {
+    return 1. - smoothstep(0., normalize(vec2(2., 2.), 0.).x, distance);
+}
+
+float determineStartVertexFactor(vec2 a, vec2 b) {
+    float condition1 = step(b.x, a.x) * step(a.y, b.y);
+    float condition2 = step(a.x, b.x) * step(b.y, a.y);
+    return 1.0 - max(condition1, condition2);
+}
+
+vec2 getRectangleCenter(vec4 rectangle) {
+    return vec2(rectangle.x + (rectangle.z / 2.), rectangle.y - (rectangle.w / 2.));
+}
+
+float ease(float x) {
+    return pow(1.0 - x, 3.0);
+}
+
+// Smooth glow function
 float glow(float distance, float radius, float intensity) {
     return pow(radius / distance, intensity);
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = normalize_coord(fragCoord, 1.0);
-    vec4 currentCursor = vec4(normalize_coord(iCurrentCursor.xy, 1.0), normalize_coord(iCurrentCursor.zw, 0.0));
-    vec4 previousCursor = vec4(normalize_coord(iPreviousCursor.xy, 1.0), normalize_coord(iPreviousCursor.zw, 0.0));
+// Slow pulse for idle state
+float idlePulse(float time) {
+    return 0.5 + 0.3 * sin(time * 1.5);
+}
+
+const float DURATION = 0.6; // Longer fade for focus applications
+const vec3 CURSOR_COLOR = vec3(0.85, 0.95, 1.0); // Soft blue-white for focus
+const vec3 GLOW_COLOR = vec3(0.6, 0.8, 1.0); // Cool blue glow
+const vec3 MOVEMENT_GLOW_COLOR = vec3(0.8, 0.9, 1.0); // Brighter when moving
+const float GLOW_RADIUS = 0.012;
+const float GLOW_INTENSITY = 1.2;
+const float IDLE_GLOW_INTENSITY = 0.6;
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
+{
+    #if !defined(WEB)
+    fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
+    #else
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    #endif
     
-    float timeDelta = iTime - iTimeCursorChange;
-    vec2 cursorCenter = currentCursor.xy - (currentCursor.zw * vec2(-0.5, 0.5));
+    // Normalization for fragCoord to a space of -1 to 1;
+    vec2 vu = normalize(fragCoord, 1.);
+    vec2 offsetFactor = vec2(-.5, 0.5);
+
+    // Normalization for cursor position and size;
+    vec4 currentCursor = vec4(normalize(iCurrentCursor.xy, 1.), normalize(iCurrentCursor.zw, 0.));
+    vec4 previousCursor = vec4(normalize(iPreviousCursor.xy, 1.), normalize(iPreviousCursor.zw, 0.));
+
+    // Determine parallelogram vertices for trail
+    float vertexFactor = determineStartVertexFactor(currentCursor.xy, previousCursor.xy);
+    float invertedVertexFactor = 1.0 - vertexFactor;
+
+    vec2 v0 = vec2(currentCursor.x + currentCursor.z * vertexFactor, currentCursor.y - currentCursor.w);
+    vec2 v1 = vec2(currentCursor.x + currentCursor.z * invertedVertexFactor, currentCursor.y);
+    vec2 v2 = vec2(previousCursor.x + currentCursor.z * invertedVertexFactor, previousCursor.y);
+    vec2 v3 = vec2(previousCursor.x + currentCursor.z * vertexFactor, previousCursor.y - previousCursor.w);
+
+    float sdfCurrentCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
+    float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
+
+    float progress = clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0);
+    float easedProgress = ease(progress);
     
-    float movement = distance(currentCursor.xy, previousCursor.xy);
-    float sdfCursor = getSdfRectangle(uv, cursorCenter, currentCursor.zw * 0.5);
+    vec2 centerCC = getRectangleCenter(currentCursor);
+    vec2 centerCP = getRectangleCenter(previousCursor);
+    float moveDistance = distance(centerCC, centerCP);
+
+    vec4 newColor = vec4(fragColor);
     
-    vec3 color = vec3(0.0);
+    // Calculate idle pulse
+    float pulse = idlePulse(iTime);
     
-    // Base cursor shape
-    vec3 baseColor = vec3(0.9, 0.9, 1.0);
-    color = mix(color, baseColor, antialising(sdfCursor) * 0.7);
-    
-    // Glow effect
-    float glowRadius = 0.015;
-    float glowIntensity = 0.6;
-    
-    // Static state: Subtle pulsing glow
-    if (movement < 0.001) {
-        float pulseSpeed = 2.5;
-        float pulseMin = 0.3;
-        float pulseMax = 0.8;
-        float pulse = (sin(iTime * pulseSpeed) * 0.5 + 0.5) * (pulseMax - pulseMin) + pulseMin;
+    // Show movement trail and glow
+    if (moveDistance > 0.001 && progress < 1.0) {
+        // Movement glow - brighter and more prominent
+        float movementGlow = glow(abs(sdfCurrentCursor), GLOW_RADIUS, GLOW_INTENSITY);
+        movementGlow = clamp(movementGlow * (1.0 - easedProgress), 0.0, 1.0);
         
-        float staticGlow = glow(abs(sdfCursor), glowRadius, glowIntensity);
-        staticGlow = clamp(staticGlow, 0.0, 1.0);
+        // Trail glow
+        float trailGlow = glow(abs(sdfTrail), GLOW_RADIUS * 0.8, GLOW_INTENSITY * 0.7);
+        trailGlow = clamp(trailGlow * (1.0 - easedProgress), 0.0, 1.0);
         
-        vec3 pulseColor = vec3(0.8, 0.8, 0.9);
-        color = mix(color, pulseColor, staticGlow * pulse * 0.15);
+        // Add movement effects
+        newColor = mix(newColor, vec4(MOVEMENT_GLOW_COLOR, 0.8), trailGlow * 0.2);
+        newColor = mix(newColor, vec4(MOVEMENT_GLOW_COLOR, 0.9), movementGlow * 0.3);
+    } else {
+        // Idle pulse glow - subtle and slow
+        float idleGlow = glow(abs(sdfCurrentCursor), GLOW_RADIUS, IDLE_GLOW_INTENSITY);
+        idleGlow = clamp(idleGlow * pulse, 0.0, 1.0);
+        
+        newColor = mix(newColor, vec4(GLOW_COLOR, 0.6), idleGlow * 0.15);
     }
-    // Moving state: Soft motion glow with trail fade
-    else {
-        float fade = 1.0 - clamp(timeDelta / 0.4, 0.0, 1.0);
-        float intensity = clamp(movement * 20.0, 0.4, 1.2) * fade;
-        
-        float motionGlow = glow(abs(sdfCursor), glowRadius * 0.8, glowIntensity * 0.9);
-        motionGlow = clamp(motionGlow, 0.0, 1.0);
-        
-        vec3 motionColor = vec3(0.7, 0.8, 1.0);
-        color = mix(color, motionColor, motionGlow * intensity * 0.2);
-    }
     
-    fragColor = vec4(color, 1.0);
+    // Draw current cursor with focus color
+    vec4 cursorColor = vec4(CURSOR_COLOR, 0.85);
+    newColor = mix(newColor, cursorColor, antialising(sdfCurrentCursor));
+    
+    fragColor = newColor;
 }
