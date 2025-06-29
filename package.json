@@ -3,5 +3,9 @@
   "devDependencies": {
     "browser-sync": "^3.0.3",
     "prettier": "^3.5.3"
+  },
+  "scripts": {
+    "dev": "browser-sync start --server --files \"./*\" \"shaders/*\"",
+    "format": "prettier --write ."
   }
 }

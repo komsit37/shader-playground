@@ -29,6 +29,45 @@ Cursor State:
 - iResolution - screen resolution
 - fragCoord - current pixel position
 
+Movement Analysis:
+
+You can distinguish between different types of cursor movement by analyzing the available data:
+
+**Typing vs Jumping Detection:**
+- Distance between positions: `distance(iCurrentCursor.xy, iPreviousCursor.xy)`
+- Small distances (~character width) = typing
+- Large distances (>several characters) = jumping/navigation
+
+**Speed Detection:**
+- Time between moves: `iTime - iTimeCursorChange`
+- Movement velocity: `distance / time_delta`
+- Fast typing: short time intervals, consistent small distances
+- Slow typing: longer intervals between moves
+- Quick jumps: large distance, short time
+- Deliberate navigation: varied distances and timing
+
+**Pattern Recognition:**
+- Horizontal movement (same Y) = likely typing on current line
+- Vertical movement = line changes, scrolling, or navigation
+- Diagonal jumps = major navigation (search results, function calls)
+- Rapid back-and-forth = editing/corrections
+
+**Implementation Examples:**
+```glsl
+float moveDistance = distance(iCurrentCursor.xy, iPreviousCursor.xy);
+float timeDelta = iTime - iTimeCursorChange;
+float velocity = moveDistance / max(timeDelta, 0.001);
+
+// Classify movement type
+bool isTyping = moveDistance < 0.05 && abs(iCurrentCursor.y - iPreviousCursor.y) < 0.01;
+bool isFastTyping = isTyping && timeDelta < 0.1;
+bool isJumping = moveDistance > 0.2;
+bool isNearJump = moveDistance > 0.05 && moveDistance < 0.2;
+bool isFarJump = moveDistance > 0.5;
+```
+
+This allows effects to adapt dynamically - subtle trails for typing, dramatic effects for navigation jumps.
+
 Background:
 
 - iChannel0 - the terminal background texture (in actual use)
