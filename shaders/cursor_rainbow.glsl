@@ -71,7 +71,7 @@ vec3 getRainbowColor(vec2 pos, float time, float speed) {
 
 const float DURATION = 0.3; // Fast fade for typing
 const float RAINBOW_SPEED = 0.8; // Subtle rainbow animation speed
-const float TRAIL_OPACITY = 0.4; // Subtle trail
+const float TRAIL_OPACITY = 0.4; // Half transparent trail
 const float CURSOR_OPACITY = 0.8; // More visible cursor
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -114,11 +114,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 trailRainbow = getRainbowColor((currentCursor.xy + previousCursor.xy) * 0.5, iTime, RAINBOW_SPEED * 0.7);
     
     // Show trail only if there was cursor movement and within duration
-    if (moveDistance > 0.001 && progress < 1.0) {
+    if (moveDistance > 0.001 && progress < 1.0 && TRAIL_OPACITY > 0.0) {
         // Fade trail based on time and distance
         float trailFade = (1.0 - easedProgress) * TRAIL_OPACITY;
-        vec4 trailColor = vec4(trailRainbow, trailFade);
-        newColor = mix(newColor, trailColor, antialising(sdfTrail));
+        float trailMask = antialising(sdfTrail) * trailFade;
+        vec4 trailColor = vec4(trailRainbow, 1.0);
+        newColor = mix(newColor, trailColor, trailMask);
     }
     
     // Draw current cursor with rainbow effect

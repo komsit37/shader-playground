@@ -14,6 +14,21 @@ newColor = mix(newColor, effectColor, intensity);
 newColor.rgb += effectColor.rgb * intensity;
 ```
 
+### Transparency Blending Fix
+**Problem:** Using `vec4(color, alpha)` with `mix()` creates black trails even with 0 alpha because mix still applies the color component.
+
+**Solution:** Control transparency through the mix factor:
+```glsl
+// ❌ Creates black trail even with alpha=0
+vec4 trailColor = vec4(rgb, alpha);
+newColor = mix(newColor, trailColor, antialias);
+
+// ✅ Proper transparency handling
+float trailMask = antialias * alpha;
+vec4 trailColor = vec4(rgb, 1.0);
+newColor = mix(newColor, trailColor, trailMask);
+```
+
 ### Terminal Content Preservation
 **Problem:** Shaders that don't read screen content create black screen in Ghostty.
 
