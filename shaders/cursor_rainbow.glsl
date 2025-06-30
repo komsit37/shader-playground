@@ -71,7 +71,7 @@ vec3 getRainbowColor(vec2 pos, float time, float speed) {
 
 const float DURATION = 0.3; // Fast fade for typing
 const float RAINBOW_SPEED = 0.8; // Subtle rainbow animation speed
-const float TRAIL_OPACITY = 0.4; // Half transparent trail
+const float TRAIL_OPACITY = 0.2; // transparent trail
 const float CURSOR_OPACITY = 0.8; // More visible cursor
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
