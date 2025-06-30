@@ -64,8 +64,15 @@ if [ ! -f "$SHADER_DIR/$SHADER_NAME.glsl" ]; then
   exit 1
 fi
 
-# Update the config file
-sed -i.bak "s|custom-shader = .*|custom-shader = $SHADER_FILE|" "$CONFIG_FILE"
+# Update the config file (handle symlinks properly)
+if [ -L "$CONFIG_FILE" ]; then
+  # If it's a symlink, resolve it and edit the target
+  REAL_CONFIG_FILE=$(readlink -f "$CONFIG_FILE")
+  sed -i.bak "s|custom-shader = .*|custom-shader = $SHADER_FILE|" "$REAL_CONFIG_FILE"
+else
+  # If it's a regular file, edit normally
+  sed -i.bak "s|custom-shader = .*|custom-shader = $SHADER_FILE|" "$CONFIG_FILE"
+fi
 
 echo "Switched to shader: $SHADER_NAME"
 
