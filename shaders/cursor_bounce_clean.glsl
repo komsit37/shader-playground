@@ -160,44 +160,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         }
     }
     
-    // Draw animated cursor with directional deformation and bounce scaling
-    vec2 scaleXY = vec2(1.0, 1.0);
+    // Draw animated cursor with bounce scaling
+    float bounceScale = 1.0;
     if (progress < 1.0 && moveDistance > 0.001) {
         float scaleIntensity = mix(0.15, 0.4, bounceIntensity);
-        float bounceScale = (1.0 - scaleIntensity) + scaleIntensity * iOSBounce(progress, bounceIntensity);
-        
-        // Calculate movement direction for directional deformation
-        vec2 direction = normalize(centerCC - centerCP);
-        float directionAngle = atan(direction.y, direction.x);
-        
-        // Apply squash and stretch based on movement direction and bounce phase
-        float settleSpeed = mix(0.7, 0.5, bounceIntensity);
-        float deformIntensity = mix(0.4, 1.2, bounceIntensity); // Much more pronounced deformation
-        
-        if (progress < settleSpeed) {
-            // During initial movement: stretch in direction of movement, squash perpendicular
-            // Make deformation peak earlier and more dramatic
-            float deformProgress = progress / settleSpeed;
-            float stretchAmount = sin(deformProgress * 3.14159) * pow(sin(deformProgress * 3.14159), 0.5) * deformIntensity;
-            
-            // Horizontal movement: stretch horizontally, squash vertically
-            float horizontalFactor = abs(direction.x);
-            float verticalFactor = abs(direction.y);
-            
-            scaleXY.x = bounceScale * (1.0 + stretchAmount * horizontalFactor - stretchAmount * 0.5 * verticalFactor);
-            scaleXY.y = bounceScale * (1.0 + stretchAmount * verticalFactor - stretchAmount * 0.5 * horizontalFactor);
-        } else {
-            // During settle: more pronounced oscillation
-            float elasticPhase = (progress - settleSpeed) / (1.0 - settleSpeed);
-            float oscillation = sin(elasticPhase * 8.0) * 0.3 * deformIntensity * (1.0 - elasticPhase);
-            scaleXY = vec2(bounceScale + oscillation, bounceScale - oscillation * 0.7);
-        }
+        bounceScale = (1.0 - scaleIntensity) + scaleIntensity * iOSBounce(progress, bounceIntensity);
     }
     
     vec4 scaledCursor = vec4(
         animatedCursor.xy,
-        animatedCursor.z * scaleXY.x,
-        animatedCursor.w * scaleXY.y
+        animatedCursor.z * bounceScale,
+        animatedCursor.w * bounceScale
     );
     
     float sdfAnimatedCursor = getSdfRectangle(vu, scaledCursor.xy - (scaledCursor.zw * offsetFactor), scaledCursor.zw * 0.5);
