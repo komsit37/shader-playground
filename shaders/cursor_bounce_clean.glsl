@@ -76,7 +76,7 @@ float iOSBounce(float t, float intensity) {
 
 const vec4 CURSOR_COLOR = vec4(0.2, 0.7, 1.0, 1.0);
 const vec4 BOUNCE_GLOW = vec4(0.4, 0.8, 1.0, 0.3);
-const vec4 TRAIL_COLOR = vec4(0.3, 0.8, 1.0, 0.8);
+const vec4 TRAIL_COLOR = vec4(0.3, 0.8, 1.0, 1.0);
 const float BASE_DURATION = 0.3; // Base duration for short jumps
 const float MAX_DURATION = 0.7; // Maximum duration for long jumps
 const float DISTANCE_SCALE = 0.5; // How much distance affects bounce intensity
@@ -125,7 +125,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         // Apply trail with distance-based snap fade
         float trailFadeSpeed = mix(2.5, 5.0, bounceIntensity); // Much faster fade for snappier feel
         float trailProgress = clamp(progress * trailFadeSpeed, 0.0, 1.0);
-        float trailOpacity = (1.0 - trailProgress) * mix(0.5, 0.8, bounceIntensity); // More intense for longer jumps
+        float trailOpacity = (1.0 - trailProgress) * mix(0.7, 1.0, bounceIntensity); // More intense for longer jumps
         newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail) * trailOpacity);
     }
     
@@ -156,7 +156,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             float glowRadius = 0.018;
             float glow = 1.0 / (distance(vu, animatedCursorCenter) / glowRadius + 1.0);
             glow *= (1.0 - progress) * 0.5; // Subtle fade out
-            newColor = mix(newColor, BOUNCE_GLOW, clamp(glow * 0.15, 0.0, 1.0));
+            newColor = mix(newColor, BOUNCE_GLOW, clamp(glow * 0.3, 0.0, 1.0));
         }
     }
     
